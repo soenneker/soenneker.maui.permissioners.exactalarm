@@ -2,6 +2,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Soenneker.Asyncs.Semaphores;
 using Android.Content;
 using Microsoft.Maui.ApplicationModel;
 
@@ -9,18 +10,18 @@ namespace Soenneker.Maui.Permissioners.ExactAlarm;
 
 internal static class AndroidSettingsRequest
 {
-    private static readonly SemaphoreSlim _gate = new(1, 1);
+    private static readonly AsyncSemaphore _gate = new(1);
 
     internal static async Task<bool> Run(Func<Task<bool>> request, CancellationToken cancellationToken)
     {
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        SemaphoreLease lease = await _gate.Acquire(cancellationToken).ConfigureAwait(false);
         try
         {
             return await request().ConfigureAwait(false);
         }
         finally
         {
-            _gate.Release();
+            lease.Dispose();
         }
     }
 
